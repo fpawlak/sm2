@@ -39,6 +39,9 @@ object Server extends IOApp {
           if(0 to 5 contains i) Some(i) else None)
     }
 
+    import Domain._
+    import io.circe.generic.auto._
+    import org.http4s.circe.CirceEntityCodec._
 
     HttpRoutes.of[IO] {
       // all cards
@@ -46,7 +49,7 @@ object Server extends IOApp {
       case GET -> Root / "cards" => Ok("hello")
 
       // cards for a certain date
-      // curl "localhost:9001/hello/world"
+      // curl "localhost:9001/cards/2022-07-06"
       case GET -> Root / "cards" / LocalDateVar(localDate) => Ok("hello")
 
       // adding a card

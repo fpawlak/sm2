@@ -4,7 +4,7 @@ import java.time.LocalDate
 
 object Domain {
   case class Card(
-    id: Long,
+    id: Int,
     question: String,
     answer: String,
     repetitions: Int,
