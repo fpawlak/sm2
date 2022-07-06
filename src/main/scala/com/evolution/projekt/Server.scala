@@ -3,6 +3,7 @@ package com.evolution.projekt
 import doobie._
 import doobie.implicits._
 import doobie.util.ExecutionContexts
+import doobie.implicits.legacy.localdate._
 
 import cats._
 import cats.data._
@@ -43,14 +44,27 @@ object Server extends IOApp {
     import io.circe.generic.auto._
     import org.http4s.circe.CirceEntityCodec._
 
+    val xa = Transactor.fromDriverManager[IO](
+      "org.postgresql.Driver",     // driver classname
+      "jdbc:postgresql:testdb",     // connect URL (driver-specific)
+      "postgres",                  // user
+      "password"                           // password
+    )
+
     HttpRoutes.of[IO] {
       // all cards
       // curl "localhost:9001/cards"
-      case GET -> Root / "cards" => Ok("hello")
+      case GET -> Root / "cards" => for {
+        list <- sql"SELECT * FROM cards".query[Card].to[List].transact(xa)
+        res <- Ok(list)
+      } yield res
 
       // cards for a certain date
       // curl "localhost:9001/cards/2022-07-06"
-      case GET -> Root / "cards" / LocalDateVar(localDate) => Ok("hello")
+      case GET -> Root / "cards" / LocalDateVar(localDate) => for {
+        list <- sql"SELECT * FROM cards WHERE scheduledfor = $localDate".query[Card].to[List].transact(xa)
+        res <- Ok(list)
+      } yield res
 
       // adding a card
       // curl -XPOST "localhost:9001/addCard"
