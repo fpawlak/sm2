@@ -67,8 +67,21 @@ object Server extends IOApp {
       } yield res
 
       // adding a card
-      // curl -XPOST "localhost:9001/addCard"
-      case req @ POST -> Root / "addCard" => Ok("hello")
+      // curl -XPOST "localhost:9001/addCard" -d '{"qaQuestion":"pytanie","qaAnswer":"odpowiedz","qaScheduledFor":"2022-07-07"}' -H "Content-Type: application/json"
+      case req @ POST -> Root / "addCard" =>
+        req.as[QuestionAnswer].flatMap { qAndA =>
+          val question = qAndA.qaQuestion
+          val answer = qAndA.qaAnswer
+          val repetitions = 0
+          val ef: Double = 2.5
+          val interval: Long = 0
+          val scheduledFor = qAndA.qaScheduledFor
+          val insertQuery: ConnectionIO[Int] = sql"INSERT INTO cards (question, answer, repetitions, ef, interval, scheduledfor) values ($question, $answer, $repetitions, $ef, $interval, $scheduledFor)".update.withUniqueGeneratedKeys("cardid")
+          for {
+            cardId <- insertQuery.transact(xa)
+            res <- Created(cardId)
+          } yield res
+        }
 
       // grading a card
       // curl -XPOST "localhost:9001/grade/100/5"
