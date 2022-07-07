@@ -26,7 +26,10 @@ object Sm2 {
     val candidateForNewEF: Double =
       ef + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02))
 
-    val newEF = if(candidateForNewEF < 1.3) 1.3 else candidateForNewEF
+    val newEF =
+      if(candidateForNewEF < 1.3) 1.3
+      else if(candidateForNewEF > 2.5) 2.5
+      else candidateForNewEF
 
     card.copy(
       repetitions = newN,
