@@ -85,7 +85,12 @@ object Server extends IOApp {
 
       // grading a card
       // curl -XPOST "localhost:9001/grade/100/5"
-      case POST -> Root / "grade" / IntVar(cardId) / GradeVar(grade) => Ok("hello")
+      case POST -> Root / "grade" / IntVar(cardId) / GradeVar(grade) => for {
+        oldCard <- sql"SELECT * FROM cards WHERE cardid = $cardId".query[Card].unique.transact(xa)
+        newCard = Sm2.rate(oldCard, grade)
+        _ <- sql"UPDATE cards SET repetitions = ${newCard.repetitions}, ef = ${newCard.ef}, interval = ${newCard.interval}, scheduledfor = ${newCard.scheduledFor} WHERE cardid = $cardId".update.run.transact(xa)
+        res <- Ok()
+      } yield res
     }
   }
 
