@@ -91,17 +91,21 @@ object Server extends IOApp {
       // grading a card
       // curl -XPOST "localhost:9001/grade/100/5"
       case POST -> Root / "grade" / IntVar(cardId) / GradeVar(grade) => for {
-        oldCard <- sql"SELECT * FROM cards WHERE cardid = $cardId".query[Card].unique.transact(xa)
-        newCard = Sm2.rate(oldCard, grade)
-        _ <- sql"""
+        oldCardOpt <- sql"SELECT * FROM cards WHERE cardid = $cardId".query[Card].option.transact(xa)
+        res <- oldCardOpt match {
+          case None => NotFound()
+          case Some(oldCard) => {
+            val newCard = Sm2.rate(oldCard, grade)
+            sql"""
                   | UPDATE cards SET 
                   | repetitions = ${newCard.repetitions}, 
                   | ef = ${newCard.ef}, 
                   | interval = ${newCard.interval}, 
                   | scheduledfor = ${newCard.scheduledFor} 
                   | WHERE cardid = $cardId
-                  |""".stripMargin.update.run.transact(xa)
-        res <- Ok()
+                  |""".stripMargin.update.run.transact(xa) >> Ok()
+          }
+        }
       } yield res
     }
   }
