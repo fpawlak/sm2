@@ -76,7 +76,12 @@ object Server extends IOApp {
           val ef: Double = 2.5
           val interval: Long = 0
           val scheduledFor = qAndA.qaScheduledFor
-          val insertQuery: ConnectionIO[Int] = sql"INSERT INTO cards (question, answer, repetitions, ef, interval, scheduledfor) values ($question, $answer, $repetitions, $ef, $interval, $scheduledFor)".update.withUniqueGeneratedKeys("cardid")
+          val insertQuery: ConnectionIO[Int] = sql"""
+               | INSERT INTO cards 
+               | (question, answer, repetitions, ef, interval, scheduledfor) 
+               | VALUES 
+               | ($question, $answer, $repetitions, $ef, $interval, $scheduledFor)
+               |""".stripMargin.update.withUniqueGeneratedKeys("cardid")
           for {
             cardId <- insertQuery.transact(xa)
             res <- Created(cardId)
@@ -88,7 +93,14 @@ object Server extends IOApp {
       case POST -> Root / "grade" / IntVar(cardId) / GradeVar(grade) => for {
         oldCard <- sql"SELECT * FROM cards WHERE cardid = $cardId".query[Card].unique.transact(xa)
         newCard = Sm2.rate(oldCard, grade)
-        _ <- sql"UPDATE cards SET repetitions = ${newCard.repetitions}, ef = ${newCard.ef}, interval = ${newCard.interval}, scheduledfor = ${newCard.scheduledFor} WHERE cardid = $cardId".update.run.transact(xa)
+        _ <- sql"""
+                  | UPDATE cards SET 
+                  | repetitions = ${newCard.repetitions}, 
+                  | ef = ${newCard.ef}, 
+                  | interval = ${newCard.interval}, 
+                  | scheduledfor = ${newCard.scheduledFor} 
+                  | WHERE cardid = $cardId
+                  |""".stripMargin.update.run.transact(xa)
         res <- Ok()
       } yield res
     }
