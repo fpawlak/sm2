@@ -6,6 +6,15 @@ import cats.effect._
 import cats.implicits._
 import scala.util.{Try,Success,Failure}
 
+import org.http4s._
+import org.http4s.client.blaze.BlazeClientBuilder
+import org.http4s.client.dsl.io._
+import org.http4s.dsl.io._
+import org.http4s.headers._
+import org.http4s.implicits._
+
+import scala.concurrent.ExecutionContext
+
 object Client extends IOApp {
 
   object Console {
@@ -14,6 +23,8 @@ object Client extends IOApp {
   }
 
   import Console._
+
+  private val uri = uri"http://localhost:9001"
 
   val selectAction: IO[Int] = for {
     _ <- putStrLn("Select action:")
@@ -33,8 +44,11 @@ object Client extends IOApp {
     }
   } yield selection
 
-  override def run(args: List[String]): IO[ExitCode] = for {
-    selection <- selectAction
-    _ <- putStrLn(s"Your selection: $selection")
-  } yield ExitCode.Success
+  override def run(args: List[String]): IO[ExitCode] =
+    BlazeClientBuilder[IO](ExecutionContext.global).resource.use { client =>
+      for {
+        selection <- selectAction
+        _ <- putStrLn(s"Your selection: $selection")
+      } yield ()
+    }.as(ExitCode.Success)
 }
