@@ -16,7 +16,7 @@ import org.http4s.implicits._
 
 import scala.concurrent.ExecutionContext
 import java.time.LocalDate
-import Domain.QuestionAnswer
+import Domain._
 
 object Client extends IOApp {
 
@@ -50,6 +50,26 @@ object Client extends IOApp {
     }
   } yield selection
 
+  def printOnCertainDate(input: (LocalDate, List[Card])): IO[Unit] = {
+    val (date, cards) = input
+    for {
+      _ <- putStrLn(s"$date:")
+      _ <- putStrLn(cards.map(_.id).mkString(", "))
+    } yield ()
+  }
+
+  def listAllCards(client: Http4sClient[IO]): IO[Unit] = {
+    implicit val localDateOrdering: Ordering[LocalDate] = Ordering.by(_.toEpochDay)
+    for {
+      cardList <- client.expect[List[Card]](uri / "cards")
+      byDateMap = cardList.groupBy(_.scheduledFor)
+      byDateList = byDateMap.toList
+      byDateListSorted = byDateList.sortBy(_._1)
+      _ <- byDateListSorted.traverse(printOnCertainDate)
+      _ <- main(client)
+    } yield ()
+  }
+
   def addCard(client: Http4sClient[IO]): IO[Unit] = for {
     _ <- putStrLn("Enter question:")
     question <- readLn
@@ -76,9 +96,11 @@ object Client extends IOApp {
 
   def main(client: Http4sClient[IO]): IO[Unit] = for {
     selection <- selectAction
-    _ <-
-    if(selection < 4) putStrLn(s"You selected $selection")
-    else addCard(client)
+    _ <- {
+      if(selection == 1) listAllCards(client)
+      else if(selection == 4) addCard(client)
+      else putStrLn(s"You selected $selection")
+    }
   } yield ()
 
   override def run(args: List[String]): IO[ExitCode] =
