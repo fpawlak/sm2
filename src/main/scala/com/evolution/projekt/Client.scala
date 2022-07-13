@@ -70,6 +70,22 @@ object Client extends IOApp {
     } yield ()
   }
 
+  def getDate: IO[LocalDate] = for {
+    _ <- putStrLn("Enter a date in the format yyyy-mm-dd:")
+    inputStr <- readLn
+    result <- Try(LocalDate.parse(inputStr)) match {
+      case Success(date) => IO.pure(date)
+      case Failure(_) => putStrLn("Wrong date format!") >> getDate
+    }
+  } yield result
+
+  def fetchAndGradeCards(client: Http4sClient[IO], askForDate: Boolean): IO[Unit] = for {
+    date <- if(askForDate) getDate else IO(LocalDate.now())
+    cards <- client.expect[List[Card]](uri / "cards" / date.toString)
+    _ <- putStrLn(s"Got the following cards: $cards")
+    _ <- main(client)
+  } yield ()
+
   def addCard(client: Http4sClient[IO]): IO[Unit] = for {
     _ <- putStrLn("Enter question:")
     question <- readLn
@@ -98,8 +114,10 @@ object Client extends IOApp {
     selection <- selectAction
     _ <- {
       if(selection == 1) listAllCards(client)
+      else if(selection == 2) fetchAndGradeCards(client, false)
+      else if(selection == 3) fetchAndGradeCards(client, true)
       else if(selection == 4) addCard(client)
-      else putStrLn(s"You selected $selection")
+      else putStrLn("Internal error!")
     }
   } yield ()
 
