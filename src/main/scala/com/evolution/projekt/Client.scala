@@ -95,6 +95,10 @@ object Client extends IOApp {
     _ <- readLn
     _ <- putStrLn(card.answer)
     grade <- getGrade
+    _ <- {
+      if(sendGrade) client.expect[String](Method.POST(uri / "grade" / card.id.toString / grade.toString))
+      else IO.pure("")
+    }
     result = if(grade < 4) Some(card) else None
   } yield result
 

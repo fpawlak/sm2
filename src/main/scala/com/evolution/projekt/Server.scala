@@ -93,7 +93,7 @@ object Server extends IOApp {
       case POST -> Root / "grade" / IntVar(cardId) / GradeVar(grade) => for {
         oldCardOpt <- sql"SELECT * FROM cards WHERE cardid = $cardId".query[Card].option.transact(xa)
         res <- oldCardOpt match {
-          case None => NotFound()
+          case None => NotFound("no such card")
           case Some(oldCard) => {
             val newCard = Sm2.rate(oldCard, grade)
             sql"""
@@ -103,7 +103,7 @@ object Server extends IOApp {
                   | interval = ${newCard.interval}, 
                   | scheduledfor = ${newCard.scheduledFor} 
                   | WHERE cardid = $cardId
-                  |""".stripMargin.update.run.transact(xa) >> Ok()
+                  |""".stripMargin.update.run.transact(xa) >> Ok("graded")
           }
         }
       } yield res
