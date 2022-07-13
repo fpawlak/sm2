@@ -79,10 +79,40 @@ object Client extends IOApp {
     }
   } yield result
 
+  def getGrade: IO[Int] = for {
+    _ <- putStrLn("Enter a grade (0-5):")
+    inputStr <- readLn
+    result <- Try(inputStr.toInt) match {
+      case Success(number) =>
+        if(0 to 5 contains number) IO.pure(number)
+        else putStrLn("Wrong input!") >> getGrade
+      case Failure(_) => putStrLn("Wrong input!") >> getGrade
+    }
+  } yield result
+
+  def gradeCard(client: Http4sClient[IO], card: Card, sendGrade: Boolean): IO[Option[Card]] = for {
+    _ <- putStrLn(s"${card.id}. ${card.question}")
+    _ <- readLn
+    _ <- putStrLn(card.answer)
+    grade <- getGrade
+    result = if(grade < 4) Some(card) else None
+  } yield result
+
+  def gradeCards(client: Http4sClient[IO], cards: List[Card], sendGrade: Boolean): IO[Unit] = {
+    if(cards.isEmpty) main(client)
+    else {
+      for {
+        listOptCards <- cards.traverse(gradeCard(client, _, sendGrade))
+        newCardList = listOptCards.collect { case Some(x) => x }
+        res <- gradeCards(client, newCardList, false)
+      } yield res
+    }
+  }
+
   def fetchAndGradeCards(client: Http4sClient[IO], askForDate: Boolean): IO[Unit] = for {
     date <- if(askForDate) getDate else IO(LocalDate.now())
     cards <- client.expect[List[Card]](uri / "cards" / date.toString)
-    _ <- putStrLn(s"Got the following cards: $cards")
+    _ <- gradeCards(client, cards, true)
     _ <- main(client)
   } yield ()
 
