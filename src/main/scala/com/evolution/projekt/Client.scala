@@ -50,6 +50,8 @@ object Client extends IOApp {
     }
   } yield selection
 
+  // listing all cards
+
   def printOnCertainDate(input: (LocalDate, List[Card])): IO[Unit] = {
     val (date, cards) = input
     for {
@@ -69,6 +71,8 @@ object Client extends IOApp {
       _ <- main(client)
     } yield ()
   }
+
+  // fetching and grading cards scheduled for a certain day
 
   def getDate: IO[LocalDate] = for {
     _ <- putStrLn("Enter a date in the format yyyy-mm-dd:")
@@ -95,10 +99,7 @@ object Client extends IOApp {
     _ <- readLn
     _ <- putStrLn(card.answer)
     grade <- getGrade
-    _ <- {
-      if(sendGrade) client.expect[String](Method.POST(uri / "grade" / card.id.toString / grade.toString))
-      else IO.pure("")
-    }
+    _ <- IO.whenA(sendGrade)(client.expect[String](Method.POST(uri / "grade" / card.id.toString / grade.toString)).void)
     result = if(grade < 4) Some(card) else None
   } yield result
 
@@ -120,28 +121,38 @@ object Client extends IOApp {
     _ <- main(client)
   } yield ()
 
-  def addCard(client: Http4sClient[IO]): IO[Unit] = for {
+  // adding new cards
+
+  def getQuestion: IO[String] = for {
     _ <- putStrLn("Enter question:")
     question <- readLn
-    _ <-
-    if(question.length > 250) putStrLn("Wrong question length!") >> addCard(client)
-    else {
-      for {
-        _ <- putStrLn("Enter answer:")
-        answer <- readLn
-        _ <-
-        if(answer.length > 250) putStrLn("Wrong answer length!") >> addCard(client)
-        else {
-          for {
-            today <- IO(LocalDate.now())
-            qaObject = QuestionAnswer(question, answer, today)
-            cardId <- client.expect[Int](Method.POST(qaObject, uri / "addCard"))
-            _ <- putStrLn(s"Added card ID $cardId")
-            _ <- main(client)
-          } yield ()
-        }
-      } yield ()
+    res <- {
+      if(question.length > 250)
+        putStrLn("Wrong question length!") >> getQuestion
+      else
+        IO.pure(question)
     }
+  } yield res
+
+  def getAnswer: IO[String] = for {
+    _ <- putStrLn("Enter answer:")
+    answer <- readLn
+    res <- {
+      if(answer.length > 250)
+        putStrLn("Wrong answer length!") >> getAnswer
+      else
+        IO.pure(answer)
+    }
+  } yield res
+
+  def addCard(client: Http4sClient[IO]): IO[Unit] = for {
+    question <- getQuestion
+    answer <- getAnswer
+    today <- IO(LocalDate.now())
+    qaObject = QuestionAnswer(question, answer, today)
+    cardId <- client.expect[Int](Method.POST(qaObject, uri / "addCard"))
+    _ <- putStrLn(s"Added card ID $cardId")
+    _ <- main(client)
   } yield ()
 
   def main(client: Http4sClient[IO]): IO[Unit] = for {
