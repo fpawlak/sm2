@@ -114,8 +114,18 @@ object Client extends IOApp {
     }
   }
 
-  def fetchAndGradeCards(client: Http4sClient[IO], askForDate: Boolean): IO[Unit] = for {
-    date <- if(askForDate) getDate else IO(LocalDate.now())
+  // fetches and grades cards scheduled for today and before
+  def fetchAndGradeCardsToday(client: Http4sClient[IO]): IO[Unit] = for {
+    date <- IO(LocalDate.now())
+    _ <- client.expect[String](Method.PUT(uri / "updateDates" / date.toString))
+    cards <- client.expect[List[Card]](uri / "cards" / date.toString)
+    _ <- gradeCards(client, cards, true)
+    _ <- main(client)
+  } yield ()
+
+  // fetches and grades cards scheduled for a certain date
+  def fetchAndGradeCards(client: Http4sClient[IO]): IO[Unit] = for {
+    date <- getDate
     cards <- client.expect[List[Card]](uri / "cards" / date.toString)
     _ <- gradeCards(client, cards, true)
     _ <- main(client)
@@ -159,8 +169,8 @@ object Client extends IOApp {
     selection <- selectAction
     _ <- {
       if(selection == 1) listAllCards(client)
-      else if(selection == 2) fetchAndGradeCards(client, false)
-      else if(selection == 3) fetchAndGradeCards(client, true)
+      else if(selection == 2) fetchAndGradeCardsToday(client)
+      else if(selection == 3) fetchAndGradeCards(client)
       else if(selection == 4) addCard(client)
       else putStrLn("Internal error!")
     }

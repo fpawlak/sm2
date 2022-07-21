@@ -107,6 +107,14 @@ object Server extends IOApp {
           }
         }
       } yield res
+
+      // updating dates of older cards to a given date
+      // curl -XPUT "localhost:9001/updateDates/2022-07-21"
+      case PUT -> Root / "updateDates" / LocalDateVar(date) => for {
+        _ <- sql"UPDATE cards SET scheduledfor = $date WHERE scheduledfor < $date".update.run.transact(xa)
+        res <- Ok("updated dates")
+      } yield res
+
     }
   }
 
