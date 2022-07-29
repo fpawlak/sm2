@@ -38,13 +38,14 @@ object Client extends IOApp {
     _ <- putStrLn("2 - Review cards scheduled for today")
     _ <- putStrLn("3 - Review cards scheduled for a certain date")
     _ <- putStrLn("4 - Add a new card")
+    _ <- putStrLn("5 - Delete a card")
     selectionStr <- readLn
     selection <- {
       val retry: IO[Int] = putStrLn("Wrong input!") >> selectAction
       Try(selectionStr.toInt) match {
         case Failure(_) => retry
         case Success(selectionInt) =>
-          if(1 to 4 contains selectionInt) IO.pure(selectionInt)
+          if(1 to 5 contains selectionInt) IO.pure(selectionInt)
           else retry
       }
     }
@@ -165,6 +166,28 @@ object Client extends IOApp {
     _ <- main(client)
   } yield ()
 
+  // deleting cards
+
+  def getCardId: IO[Int] = for {
+    _ <- putStrLn("Enter card ID:")
+    idStr <- readLn
+    res <- Try(idStr.toInt) match {
+      case Success(id) => IO.pure(id)
+      case Failure(_) => putStrLn("Wrong input!") >> getCardId
+    }
+  } yield res
+
+  def deleteCard(client: Http4sClient[IO]): IO[Unit] = for {
+    cardId <- getCardId
+    request <- Method.DELETE(uri / "card" / cardId.toString)
+    _ <- client.run(request).use { response =>
+      if(response.status.code == 200) putStrLn("Card deleted!")
+      else if(response.status.code == 404) putStrLn("No such card!")
+      else putStrLn("Error, HTTP status ${response.status.code}!")
+    }
+    _ <- main(client)
+  } yield ()
+
   def main(client: Http4sClient[IO]): IO[Unit] = for {
     selection <- selectAction
     _ <- {
@@ -172,6 +195,7 @@ object Client extends IOApp {
       else if(selection == 2) fetchAndGradeCardsToday(client)
       else if(selection == 3) fetchAndGradeCards(client)
       else if(selection == 4) addCard(client)
+      else if(selection == 5) deleteCard(client)
       else putStrLn("Internal error!")
     }
   } yield ()

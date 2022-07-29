@@ -115,6 +115,13 @@ object Server extends IOApp {
         res <- Ok("updated dates")
       } yield res
 
+      // deleting a card
+      // curl -XDELETE "localhost:9001/card/1"
+      case DELETE -> Root / "card" / IntVar(cardId) => for {
+        howMany <- sql"DELETE FROM cards WHERE cardid = $cardId".update.run.transact(xa)
+        res <- if(howMany != 0) Ok("card deleted") else NotFound("no such card")
+      } yield res
+
     }
   }
 
