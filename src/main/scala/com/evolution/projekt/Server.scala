@@ -122,6 +122,31 @@ object Server extends IOApp {
         res <- if(howMany != 0) Ok("card deleted") else NotFound("no such card")
       } yield res
 
+      // getting a single card by ID
+      // curl "localhost:9001/card/1"
+      case GET -> Root / "card" / IntVar(cardId) => for {
+        cardOpt <- sql"SELECT * FROM cards WHERE cardid = $cardId".query[Card].option.transact(xa)
+        res <- cardOpt match {
+          case None => NotFound("no such card")
+          case Some(card) => Ok(card)
+        }
+      } yield res
+
+      // modifying a card
+      // curl -XPUT "localhost:9001/card/1" -d '{"qaQuestion":"pytanie","qaAnswer":"odpowiedz","qaScheduledFor":"2022-07-07"}' -H "Content-Type: application/json"
+      case req @ PUT -> Root / "card" / IntVar(cardId) =>
+        req.as[QuestionAnswer].flatMap { qAndA => 
+          for {
+            howMany <- sql"""
+                  | UPDATE cards SET 
+                  | question = ${qAndA.qaQuestion}, 
+                  | answer = ${qAndA.qaAnswer}
+                  | WHERE cardid = $cardId
+                  |""".stripMargin.update.run.transact(xa)
+            res <- if(howMany != 0) Ok("card modified") else NotFound("no such card")
+          } yield res
+        }
+
     }
   }
 
