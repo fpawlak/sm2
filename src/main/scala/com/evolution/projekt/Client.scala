@@ -40,13 +40,14 @@ object Client extends IOApp {
     _ <- putStrLn("4 - Add a new card")
     _ <- putStrLn("5 - Delete a card")
     _ <- putStrLn("6 - Modify a card")
+    _ <- putStrLn("7 - Display a single card")
     selectionStr <- readLn
     selection <- {
       val retry: IO[Int] = putStrLn("Wrong input!") >> selectAction
       Try(selectionStr.toInt) match {
         case Failure(_) => retry
         case Success(selectionInt) =>
-          if(1 to 6 contains selectionInt) IO.pure(selectionInt)
+          if(1 to 7 contains selectionInt) IO.pure(selectionInt)
           else retry
       }
     }
@@ -167,7 +168,7 @@ object Client extends IOApp {
     _ <- main(client)
   } yield ()
 
-  // function used in deleting and modifying a card
+  // function used in deleting, modifying and displaying a card
 
   def getCardId: IO[Int] = for {
     _ <- putStrLn("Enter card ID:")
@@ -216,6 +217,25 @@ object Client extends IOApp {
     }
   } yield ()
 
+  // displaying a card
+
+  def displayCard(client: Http4sClient[IO]): IO[Unit] = for {
+    cardId <- getCardId
+    request <- Method.GET(uri / "card" / cardId.toString)
+    _ <- client.run(request).use { response =>
+      if(response.status.code == 200) {
+        for {
+          card <- response.as[Card]
+          _ <- putStrLn(s"Question: ${card.question}")
+          _ <- putStrLn(s"Answer: ${card.answer}")
+          _ <- main(client)
+        } yield ()
+      }
+      else if(response.status.code == 404) putStrLn("No such card!") >> main(client)
+      else putStrLn("Error, HTTP status $status when fetching the card!") >> main(client)
+    }
+  } yield ()
+
   def main(client: Http4sClient[IO]): IO[Unit] = for {
     selection <- selectAction
     _ <- {
@@ -225,6 +245,7 @@ object Client extends IOApp {
       else if(selection == 4) addCard(client)
       else if(selection == 5) deleteCard(client)
       else if(selection == 6) modifyCard(client)
+      else if(selection == 7) displayCard(client)
       else putStrLn("Internal error!")
     }
   } yield ()
