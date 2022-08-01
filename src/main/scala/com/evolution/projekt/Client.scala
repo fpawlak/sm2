@@ -187,7 +187,7 @@ object Client extends IOApp {
     _ <- client.run(request).use { response =>
       if(response.status.code == 200) putStrLn("Card deleted!")
       else if(response.status.code == 404) putStrLn("No such card!")
-      else putStrLn("Error, HTTP status ${response.status.code}!")
+      else putStrLn(s"Error, HTTP status ${response.status.code}!")
     }
     _ <- main(client)
   } yield ()
@@ -213,7 +213,7 @@ object Client extends IOApp {
         } yield ()
       }
       else if(status == 404) putStrLn("No such card!") >> main(client)
-      else putStrLn("Error, HTTP status $status when fetching the card!") >> main(client)
+      else putStrLn(s"Error, HTTP status $status when fetching the card!") >> main(client)
     }
   } yield ()
 
@@ -232,7 +232,7 @@ object Client extends IOApp {
         } yield ()
       }
       else if(response.status.code == 404) putStrLn("No such card!") >> main(client)
-      else putStrLn("Error, HTTP status $status when fetching the card!") >> main(client)
+      else putStrLn(s"Error, HTTP status ${response.status.code} when fetching the card!") >> main(client)
     }
   } yield ()
 
