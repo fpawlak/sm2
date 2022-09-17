@@ -15,7 +15,7 @@ object Sm2 {
           (n + 1, 6)
         }
         else {
-          (n + 1, Math.round(interval * ef))
+          (n + 1, math.ceil(interval * ef).toLong)
         }
       }
       else {
