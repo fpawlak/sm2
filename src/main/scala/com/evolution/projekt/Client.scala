@@ -33,7 +33,7 @@ object Client extends IOApp {
   private val uri = uri"http://localhost:9001"
 
   val selectAction: IO[Int] = for {
-    _ <- putStrLn("Select action:")
+    _ <- putStrLn("\nSelect action:")
     _ <- putStrLn("1 - List all cards by date")
     _ <- putStrLn("2 - Review cards scheduled for today")
     _ <- putStrLn("3 - Review cards scheduled for a certain date")
@@ -43,7 +43,7 @@ object Client extends IOApp {
     _ <- putStrLn("7 - Display a single card")
     selectionStr <- readLn
     selection <- {
-      val retry: IO[Int] = putStrLn("Wrong input!") >> selectAction
+      val retry: IO[Int] = putStrLn("\nWrong input!") >> selectAction
       Try(selectionStr.toInt) match {
         case Failure(_) => retry
         case Success(selectionInt) =>
@@ -58,7 +58,7 @@ object Client extends IOApp {
   def printOnCertainDate(input: (LocalDate, List[Card])): IO[Unit] = {
     val (date, cards) = input
     for {
-      _ <- putStrLn(s"$date:")
+      _ <- putStrLn(s"\n$date:")
       _ <- putStrLn(cards.map(_.id).mkString(", "))
     } yield ()
   }
@@ -78,11 +78,11 @@ object Client extends IOApp {
   // fetching and grading cards scheduled for a certain day
 
   def getDate: IO[LocalDate] = for {
-    _ <- putStrLn("Enter a date in the format yyyy-mm-dd:")
+    _ <- putStrLn("\nEnter a date in the format yyyy-mm-dd:")
     inputStr <- readLn
     result <- Try(LocalDate.parse(inputStr)) match {
       case Success(date) => IO.pure(date)
-      case Failure(_) => putStrLn("Wrong date format!") >> getDate
+      case Failure(_) => putStrLn("\nWrong date format!") >> getDate
     }
   } yield result
 
@@ -98,7 +98,7 @@ object Client extends IOApp {
   } yield result
 
   def gradeCard(client: Http4sClient[IO], card: Card, sendGrade: Boolean): IO[Option[Card]] = for {
-    _ <- putStrLn(s"${card.id}. ${card.question}")
+    _ <- putStrLn(s"\n${card.id}. ${card.question}")
     _ <- readLn
     _ <- putStrLn(card.answer)
     grade <- getGrade
@@ -137,7 +137,7 @@ object Client extends IOApp {
   // adding new cards
 
   def getQuestion: IO[String] = for {
-    _ <- putStrLn("Enter question:")
+    _ <- putStrLn("\nEnter question:")
     question <- readLn
     res <- {
       if(question.length > 250)
@@ -148,7 +148,7 @@ object Client extends IOApp {
   } yield res
 
   def getAnswer: IO[String] = for {
-    _ <- putStrLn("Enter answer:")
+    _ <- putStrLn("\nEnter answer:")
     answer <- readLn
     res <- {
       if(answer.length > 250)
@@ -164,18 +164,18 @@ object Client extends IOApp {
     today <- IO(LocalDate.now())
     qaObject = QuestionAnswer(question, answer, today)
     cardId <- client.expect[Int](Method.POST(qaObject, uri / "addCard"))
-    _ <- putStrLn(s"Added card ID $cardId")
+    _ <- putStrLn(s"\nAdded card ID $cardId")
     _ <- main(client)
   } yield ()
 
   // function used in deleting, modifying and displaying a card
 
   def getCardId: IO[Int] = for {
-    _ <- putStrLn("Enter card ID:")
+    _ <- putStrLn("\nEnter card ID:")
     idStr <- readLn
     res <- Try(idStr.toInt) match {
       case Success(id) => IO.pure(id)
-      case Failure(_) => putStrLn("Wrong input!") >> getCardId
+      case Failure(_) => putStrLn("\nWrong input!") >> getCardId
     }
   } yield res
 
@@ -185,9 +185,9 @@ object Client extends IOApp {
     cardId <- getCardId
     request <- Method.DELETE(uri / "card" / cardId.toString)
     _ <- client.run(request).use { response =>
-      if(response.status.code == 200) putStrLn("Card deleted!")
-      else if(response.status.code == 404) putStrLn("No such card!")
-      else putStrLn(s"Error, HTTP status ${response.status.code}!")
+      if(response.status.code == 200) putStrLn("\nCard deleted!")
+      else if(response.status.code == 404) putStrLn("\nNo such card!")
+      else putStrLn(s"\nError, HTTP status ${response.status.code}!")
     }
     _ <- main(client)
   } yield ()
@@ -208,12 +208,12 @@ object Client extends IOApp {
           today <- IO(LocalDate.now())
           qaObject = QuestionAnswer(newQuestion, newAnswer, today)
           _ <- client.expect[String](Method.PUT(qaObject, uri / "card" / cardId.toString))
-          _ <- putStrLn("Card modified!")
+          _ <- putStrLn("\nCard modified!")
           _ <- main(client)
         } yield ()
       }
-      else if(status == 404) putStrLn("No such card!") >> main(client)
-      else putStrLn(s"Error, HTTP status $status when fetching the card!") >> main(client)
+      else if(status == 404) putStrLn("\nNo such card!") >> main(client)
+      else putStrLn(s"\nError, HTTP status $status when fetching the card!") >> main(client)
     }
   } yield ()
 
@@ -226,13 +226,13 @@ object Client extends IOApp {
       if(response.status.code == 200) {
         for {
           card <- response.as[Card]
-          _ <- putStrLn(s"Question: ${card.question}")
+          _ <- putStrLn(s"\nQuestion: ${card.question}")
           _ <- putStrLn(s"Answer: ${card.answer}")
           _ <- main(client)
         } yield ()
       }
-      else if(response.status.code == 404) putStrLn("No such card!") >> main(client)
-      else putStrLn(s"Error, HTTP status ${response.status.code} when fetching the card!") >> main(client)
+      else if(response.status.code == 404) putStrLn("\nNo such card!") >> main(client)
+      else putStrLn(s"\nError, HTTP status ${response.status.code} when fetching the card!") >> main(client)
     }
   } yield ()
 
